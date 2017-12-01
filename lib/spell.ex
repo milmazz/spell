@@ -30,11 +30,19 @@ defmodule Spell do
   Generate possible spelling correction for word
   """
   def candidates(word) do
-    attempts = [:first, :second, :third, :last]
+    cond do
+      (candidates = known([word])) != [] ->
+        candidates
 
-    Enum.reduce_while(attempts, [], fn attempt, acc ->
-      check_candidate(attempt, word, acc)
-    end)
+      (candidates = word |> edits1() |> known()) != [] ->
+        candidates
+
+      (candidates = word |> edits2() |> known()) != [] ->
+        candidates
+
+      true ->
+        [word]
+    end
   end
 
   @doc """
@@ -94,23 +102,5 @@ defmodule Spell do
     @words
     |> Enum.sort(fn {_, x}, {_, y} -> x >= y end)
     |> Enum.take(amount)
-  end
-
-  defp check_candidate(:first, word, _) do
-    [word] |> known() |> process_result()
-  end
-
-  defp check_candidate(:second, word, _) do
-    word |> edits1() |> known() |> process_result()
-  end
-
-  defp check_candidate(:third, word, _) do
-    word |> edits2() |> known() |> process_result()
-  end
-
-  defp check_candidate(:last, word, _), do: {:halt, [word]}
-
-  defp process_result(candidates) do
-    if candidates != [], do: {:halt, candidates}, else: {:cont, candidates}
   end
 end
