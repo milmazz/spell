@@ -16,6 +16,8 @@ defmodule Spell do
 
   @dictionary_values @words |> Map.values() |> Enum.sum()
 
+  @letters "abcdefghijklmnopqrstuvwxyz"
+
   @doc """
   Probability of word
   """
@@ -37,7 +39,7 @@ defmodule Spell do
       (candidates = word |> edits1() |> known()) != [] ->
         candidates
 
-      (candidates = word |> edits2() |> known()) != [] ->
+      (candidates = word |> edits2() |> known2()) != [] ->
         candidates
 
       true ->
@@ -52,47 +54,81 @@ defmodule Spell do
     for w <- words, Map.has_key?(@words, w), do: w
   end
 
+  def known2(streams) do
+    for stream <- streams,
+        w <- stream,
+        Map.has_key?(@words, w),
+        do: w
+  end
+
   @doc """
   All edits that are one edit away from word
   """
   def edits1(word) do
-    letters = String.codepoints("abcdefghijklmnopqrstuvwxyz")
     word_length = String.length(word)
 
     splits =
-      for i <- Range.new(0, word_length), do: {
-        String.slice(word, 0, i),
-        String.slice(word, i, word_length)
-      }
+      for i <- Range.new(0, word_length),
+          do:
+            {
+              String.slice(word, 0, i),
+              String.slice(word, i, word_length)
+            }
 
-    deletes = for {l, r} <- splits, r != "", do: l <> String.slice(r, 1, word_length)
+    splits
+    |> deletes(word_length)
+    |> Stream.concat(transposes(splits, word_length))
+    |> Stream.concat(replaces(splits, word_length))
+    |> Stream.concat(inserts(splits))
+    |> Stream.uniq()
+  end
 
-    transposes =
-      for {l, r} <- splits,
-          String.length(r) > 1,
-          do: l <> String.at(r, 1) <> String.at(r, 0) <> String.slice(r, 2, word_length)
+  defp deletes(splits, word_length) do
+    splits
+    |> Stream.reject(fn {_l, r} -> r == "" end)
+    |> Stream.map(fn {l, r} -> l <> String.slice(r, 1, word_length) end)
+  end
 
-    replaces =
-      for {l, r} <- splits,
-          c <- letters,
-          r != "",
-          do: l <> c <> String.slice(r, 1, word_length)
+  defp transposes(splits, word_length) do
+    splits
+    |> Stream.filter(fn {_l, r} -> String.length(r) > 1 end)
+    |> Stream.map(fn {l, r} ->
+         l <> String.at(r, 1) <> String.at(r, 0) <> String.slice(r, 2, word_length)
+       end)
+  end
 
-    inserts =
-      for {l, r} <- splits,
-          c <- letters,
-          do: l <> c <> r
+  defp replaces(splits, word_length) do
+    splits
+    |> Stream.reject(fn {_l, r} -> r == "" end)
+    |> Stream.flat_map(fn {l, r} ->
+         @letters
+         |> Stream.unfold(&String.next_codepoint/1)
+         |> Enum.map(fn c ->
+              l <> c <> String.slice(r, 1, word_length)
+            end)
+       end)
+  end
 
-    Enum.uniq(deletes ++ transposes ++ replaces ++ inserts)
+  defp inserts(splits) do
+    splits
+    |> Stream.flat_map(fn {l, r} ->
+         @letters
+         |> Stream.unfold(&String.next_codepoint/1)
+         |> Enum.map(fn c -> l <> c <> r end)
+       end)
   end
 
   @doc """
   All edits that are two edits away from word.
   """
   def edits2(word) do
-    for e1 <- edits1(word),
-        e2 <- edits1(e1),
-        do: e2
+    word
+    |> edits1()
+    |> Enum.map(&edits1/1)
+
+    # for e1 <- edits1(word),
+    #     e2 <- edits1(e1),
+    #     do: e2
   end
 
   ## Helpers
