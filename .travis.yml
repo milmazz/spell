@@ -1,0 +1,35 @@
+---
+sudo: false
+language: elixir
+elixir:
+  - 1.8.2
+otp_release:
+  - 21.1
+  - 22.0
+cache:
+  directories:
+    - _build
+    - deps
+    - ~/.mix
+    - ~/.hex
+    - ~/.npm
+env:
+  - MIX_ENV=test
+before_script:
+  - mix compile --warnings-as-errors
+jobs:
+  include:
+    - stage: format
+      env:
+        - MIX_ENV=dev
+      script:
+        - mix format --check-formatted
+        - mix credo
+      erlang: 21.1
+    - stage: types
+      env:
+        - MIX_ENV=dev
+      before_script: travis_wait 20 mix dialyzer --plt
+      script:
+        - mix dialyzer --halt-exit-status
+      erlang: 21.1

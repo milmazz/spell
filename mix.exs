@@ -1,13 +1,20 @@
 defmodule Spell.MixProject do
   use Mix.Project
 
+  @version "0.2.0"
+
   def project do
     [
       app: :spell,
-      version: "0.1.0",
-      elixir: "~> 1.6-dev",
+      version: @version,
+      elixir: "~> 1.8",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      dialyzer: [
+        check_plt: true,
+        flags: [:error_handling, :race_conditions, :underspecs]
+      ],
+      docs: docs()
     ]
   end
 
@@ -21,8 +28,16 @@ defmodule Spell.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},
+      {:dialyxir, "~> 1.0.0-rc.6", only: [:dev], runtime: false},
+      {:credo, "~> 1.0", only: [:dev, :test], runtime: false}
+    ]
+  end
+
+  defp docs do
+    [
+      source_ref: "v#{@version}",
+      main: "readme",
+      extras: ["README.md"]
     ]
   end
 end
