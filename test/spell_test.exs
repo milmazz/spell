@@ -43,21 +43,23 @@ defmodule SpellTest do
   end
 
   test "performance for development set" do
-    expected_results = %{good_rate: 76, n: 270, unknown_rate: 6, words_second: 34}
+    expected_results = %{good_rate: 76, n: 270, unknown_rate: 6}
 
-    assert Map.equal?(
-             expected_results,
-             process_file(Path.expand("fixtures/spell-testset1.txt", __DIR__))
-           )
+    assert "fixtures/spell-testset1.txt"
+           |> Path.expand(__DIR__)
+           |> process_file()
+           |> Map.delete(:words_second)
+           |> Map.equal?(expected_results)
   end
 
   test "performance for final test set" do
-    expected_results = %{good_rate: 69, n: 400, unknown_rate: 11, words_second: 27}
+    expected_results = %{good_rate: 69, n: 400, unknown_rate: 11}
 
-    assert Map.equal?(
-             expected_results,
-             process_file(Path.expand("fixtures/spell-testset2.txt", __DIR__))
-           )
+    assert "fixtures/spell-testset2.txt"
+           |> Path.expand(__DIR__)
+           |> process_file()
+           |> Map.delete(:words_second)
+           |> Map.equal?(expected_results)
   end
 
   defp parse(lines) do
